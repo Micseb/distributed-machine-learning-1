@@ -1,5 +1,15 @@
-# Databricks notebook source exported at Thu, 26 May 2016 21:07:54 UTC
+# Databricks notebook source exported at Fri, 27 May 2016 08:33:51 UTC
+"""
+Author: Santiago Morante
+"""
+
+from pyspark.sql import DataFrame as DFPyspark
+from pyspark.rdd import RDD
+from pyspark.sql import SQLContext
+from pyspark import SparkContext
+from pandas import DataFrame as DFPandas
 from numpy.linalg import norm
+
 
 class DMF():
     """
@@ -9,23 +19,11 @@ class DMF():
     doi: 10.1109/HUMANOIDS.2015.7363569
     URL: http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=7363569&isnumber=7362951
 
-    :param data:            RDD of data points
-    :param dissimilarityMethod:      Method for performing dissimilarity
-    :param mappingMethod:      Method for performing mapping
+    :param data:                 RDD of data points
+    :param dissimilarityMethod:  Method for performing dissimilarity
+    :param mappingMethod:        Method for performing mapping
     :param filteringMethod:      Method for performing filtering
-    :param theta: threhold used in filtering step
-
-    #Use case:
-    >>> dataIndex = dataParallel.zipWithIndex().map(lambda x: (x[1],x[0]))
-    >>> dataCrossJoin = dataIndex.cartesian(dataIndex)
-    >>> dataDissimilarity=dataCrossJoin.map(dissimilarity)
-    >>> dataMapping = dataDissimilarity.reduceByKey(mapping)
-    >>> meanData= dataMapping.values().mean()
-    >>> stdevData= dataMapping.values().stdev()
-    >>> theta=0
-    >>> dataFiltering = dataMapping.filter(lambda pairs: filtering(pairs, meanData, stdevData, theta))
-    
-    .. versionadded:: 2.0
+    :param theta:                Threhold used in filtering step
     """
    
     def __init__(self, dissimilarityMethod="euclidean", mappingMethod="sum", filteringMethod="zscore", theta=0):
@@ -34,6 +32,25 @@ class DMF():
       self.filteringMethod = filteringMethod
       self.theta=theta
 
+    def convertToRDD(self, dataset):
+      sc = SparkContext.getOrCreate()
+      if isinstance(dataset, RDD):
+        return dataset
+      
+      elif isinstance(dataset, DFPyspark):
+          return dataset.toDF()
+      
+      elif isinstance(dataset, DFPandas):
+        sqlContext = SQLContext.getOrCreate(sc)
+        return sqlContext.createDataFrame(dataset).rdd.flatMap(list)
+      
+      else:
+        try:
+            return sc.parallelize(dataset)
+        except TypeError:
+            print("convertToRDD cannot convert your dataset because it is not one of the allowed types (RDD, dataframe (sql) or dataframe(pandas))")
+ 
+      
     def dissimilarity(self, doublePairs): 
       """DISSIMILARITY: calculate distance between elements"""
       if self.dissimilarityMethod == "euclidean":
@@ -58,23 +75,44 @@ class DMF():
          raise ValueError("filteringMethod should be an allowed method, "
                               "but got %s." % str(filteringMethod))
 
-    def detect(self, rdd):
-      """Detects the anomaly in the dataset"""
+    def detect(self, dataset):
+      """Detects anomalies in the dataset"""
+ 
+      #convert to RDD
+      rdd = self.convertToRDD(dataset)
+      
+      #index data
       dataIndex = rdd.zipWithIndex().map(lambda x: (x[1],x[0]))
+      
+      #dissimilarity
       dataDissimilarity = dataIndex.cartesian(dataIndex).map(self.dissimilarity)
+      
+      #mapping
       dataMapping = dataDissimilarity.reduceByKey(self.mapping)
+      
+      #filtering
       meanData= dataMapping.values().mean()
       stdevData= dataMapping.values().stdev()
       dataFiltering = dataMapping.filter(lambda pairs: self.filtering(pairs, meanData, stdevData, self.theta))
+      
+      #return
       return dataFiltering
   
 
 # COMMAND ----------
 
-#DATA: generate sine wave with outliers
+#######################################################
+### MAIN ##############################################
+#######################################################
+
 from numpy import sin, linspace
 import matplotlib.pylab as plt
+from pyspark import SparkContext
 
+#sparkContext
+sc = SparkContext.getOrCreate()
+
+#DATA: generate sine wave with outliers
 data = sin(range(0,10)).tolist() + \
                     [35] +  \
                     sin(range(11,20)).tolist() + \
@@ -82,7 +120,6 @@ data = sin(range(0,10)).tolist() + \
                     sin(range(21,30)).tolist() + \
                     [60]  +  \
                     sin(range(31,50)).tolist() 
-
 
 #plot
 x = linspace(0, len(data))
@@ -92,10 +129,14 @@ display(fig)
 
 # COMMAND ----------
 
-#DATA: parallelize    
+#parallelize data
 dataParallel = sc.parallelize(data)    
+
+#create model
 model= DMF()
-print ("Index, totalValue: ", model.detect(dataParallel).collect())
+
+#detect using model
+print ("Index, totalValue: ", model.detect(data).collect())
 
 # COMMAND ----------
 
