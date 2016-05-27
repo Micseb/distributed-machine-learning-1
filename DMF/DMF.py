@@ -1,4 +1,4 @@
-# Databricks notebook source exported at Fri, 27 May 2016 08:33:51 UTC
+# Databricks notebook source exported at Fri, 27 May 2016 08:43:12 UTC
 """
 Author: Santiago Morante
 """
@@ -38,7 +38,7 @@ class DMF():
         return dataset
       
       elif isinstance(dataset, DFPyspark):
-          return dataset.toDF()
+          return dataset.rdd.flatMap(list)
       
       elif isinstance(dataset, DFPandas):
         sqlContext = SQLContext.getOrCreate(sc)
