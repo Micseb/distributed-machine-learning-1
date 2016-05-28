@@ -1,14 +1,14 @@
 # Anomaly detection
 
-In this repository you can find a distributed version of an anomaly detection algorithm. The algorithms is based on Dissimilarity Mapping Filtering, an algorithm developed originally in [S. Morante, J. G. Victores and C. Balaguer, "Automatic demonstration and feature selection for robot learning," Humanoid Robots (Humanoids), 2015 IEEE-RAS 15th International Conference on, Seoul, 2015, pp. 428-433](http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=7363569&isnumber=7362951).
+In this repository you can find a distributed version of an anomaly detection algorithm. The algorithm is based on Dissimilarity Mapping Fitering, developed originally in [S. Morante, J. G. Victores and C. Balaguer, "Automatic demonstration and feature selection for robot learning," Humanoid Robots (Humanoids), 2015 IEEE-RAS 15th International Conference on, Seoul, 2015, pp. 428-433](http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=7363569&isnumber=7362951).
 
 Basically, it performs a pairwise comparison between all the elements in the dataset using some distance (several defined). Then, it reduces the information to a single dimension and filters by some threshold.
 
 This repository includes two developments:
 
 1. **Signal**: This class allows to input data in several formats (lists, RDD, pandas dataframe, Spark dataframe, etc) and obtain an RDD with special properties:
-	- Every row is converted to string or float depending of the dataset (categorical or numerical)
-	- Every missing value in each row is imputed with tunneable values
+	- Every row is converted to string or float depending on the dataset (categorical or numerical)
+	- Every missing value is imputed with tunneable values
 	- Every row is given a unique index
 
 2. **DMF**: This class implements the core idea behind Dissimilarity Mapping Filtering. Each block connects to the next, but it is agnostic to the algorithm used in other blocks. The algorithms available in each block are:
