@@ -11,9 +11,9 @@ This repository includes two developments:
 	- Every missing value in each row is imputed with tunneable values
 	- Every row is given a unique index
 
-2. **DMF**: This class implements the core idea behind Dissimilarity Mapping Filtering. Each block connects to the next, but it is agnostic to the algorithm used in each block. The algorithms available in each block are:
+2. **DMF**: This class implements the core idea behind Dissimilarity Mapping Filtering. Each block connects to the next, but it is agnostic to the algorithm used in other blocks. The algorithms available in each block are:
 	- Dissimilarity:
-		1. Euclidean ('euclidean'): list of data is compared using euclidean distance between each element on the lists
+		1. Euclidean ('euclidean'): list of data is compared using euclidean distance between elements of the lists
 		2. Dynamic Time Warping ('dtw'): it performs a Dynamic Time Warping comparison between the lists
 		3. Hamming ('hamming'): more suitable for categorical variables, it performs a Hamming distance calculation between the lists
 		
@@ -21,7 +21,7 @@ This repository includes two developments:
 		1. Sum ('sum'): it sums all the values of one index into a single value
 		
 	- Filtering:
-		1. Z-score ('zscore'): it performs a normalization of data ((data - mean)/stDev) and filter with using a threshold alpha
+		1. Z-score ('zscore'): it performs a normalization of data ((data - mean)/stDev) and filter it using a threshold alpha
 		2. Threshold ('zscore'): it filters data based on a threshold alpha
 		
 		
