@@ -1,4 +1,4 @@
-# Databricks notebook source exported at Sat, 28 May 2016 11:16:47 UTC
+# Databricks notebook source exported at Sat, 28 May 2016 12:41:34 UTC
 """
 Author: Santiago Morante
 DISTRIBUTED ANOMALY DETECTION ALGORITHM BASED ON DISSIMILARITY MAPPING FILTERING
@@ -14,22 +14,30 @@ from pyspark.rdd import RDD
 from pyspark import SparkContext
 from pandas import DataFrame as DFPandas
 from numpy.linalg import norm
+from numpy import array
 from fastdtw import fastdtw
+
 
 class Signal():
   """
   Signal:
   1. Takes data in regular table style (rows, columns), 
   2. Converts it to RDD (if not yet)
-  3. Indexes every row with the index in the first position of a tupla (index, listOfValuesOfTheRow),
-  4. Imputes values in missing positions. --toDo
+  3. Indexes every row with the index in the first position of a tuple (index, listOfValuesOfTheRow),
+  4. Converts every element to float and imputes missing values
   
-  Each tupla in a Signal instance represents a vector of data.
+  Each tuple in a Signal instance represents a vector of data.
   """
 
+  def __init__(self, typeOfData="numerical", missingNumDefault=0, missingCatDefault="NA"):
+        """Initialize parameters"""
+        self.typeOfData = typeOfData
+        self.missingNumDefault = missingNumDefault
+        self.missingCatDefault = missingCatDefault
+      
   def create(self, dataset):
     """Creates Signal from list, rdd, dataframe (spark) or dataframe (pandas)"""
-    rdd = self.convertToRDD(dataset)
+    rdd = self.convertToRDD(dataset).map(self.imputeMissingValues)
     return self.indexRDD(rdd)
     
   def convertToRDD(self, dataset):
@@ -49,10 +57,20 @@ class Signal():
           print("convertToRDD cannot convert dataset because it is not one of the allowed types \
           (RDD, dataframe (sparkSQL) or dataframe (pandas))")
   
+  def imputeMissingValues(self, line):
+    """Imputes default value to missing values in each line of RDD"""
+    if self.typeOfData == "numerical":
+      return [float(x) if x else self.missingNumDefault for x in line]
+    elif self.typeOfData == "categorical":
+      return [str(x) if x else self.missingCatDefault for x in line]
+    else:
+      raise ValueError("typeOfData not recognized")
+  
   def indexRDD(self, rdd):
     """Index each row of a RDD as a tuple (index, listOfValuesOfTheRow)"""
     return rdd.zipWithIndex().map(lambda x: (x[1],x[0]))
   
+
 #######################################################################  
 
 class DMF():
@@ -77,34 +95,20 @@ class DMF():
 
     def dissimilarity(self, doublePairs): 
       """DISSIMILARITY: calculate distance between elements"""
-      #euclidean
       if self.dissimilarityMethod == "euclidean":
-        #convert to float
-        element0 = [float(x) for x in doublePairs[0][1]]
-        element1 = [float(x) for x in doublePairs[1][1]]
-        #subtract lists
-        subtraction = [a - b for a, b in zip(element1, element0)]
-        return float(doublePairs[0][0]), norm(subtraction)
-      #dtw
+        return doublePairs[0][0], norm(array(doublePairs[1][1])-array(doublePairs[0][1]))
       if self.dissimilarityMethod == "dtw":
-        #convert to float
-        element0 = [float(x) for x in doublePairs[0][1]]
-        element1 = [float(x) for x in doublePairs[1][1]]
-        #fastdtw
-        distance, path = fastdtw(element0, element1)
-        return float(doublePairs[0][0]), distance
-      #unknown
+        distance, path = fastdtw(doublePairs[0][1], doublePairs[1][1])
+        return doublePairs[0][0], distance
       else:
-        raise ValueError("dissimilarityMethod should be an allowed method, "
-                            "but got %s." % str(dissimilarityMethod))
+        raise ValueError("dissimilarityMethod not recognized")
 
     def mapping(self, a,b):
       """MAPPING: reduce the comparisons matrix to single value per element key"""
       if self.mappingMethod == "sum":
         return a+b
       else:
-        raise ValueError("mappingMethod should be an allowed method, "
-                              "but got %s." % str(mappingMethod))
+        raise ValueError("mappingMethod not recognized")
         
     def filtering(self, pairs, meanData, stdevData, theta):
       """FILTERING: filtering data by threshold (theta) using Z-score"""
@@ -114,8 +118,7 @@ class DMF():
         except:
           raise ValueError("Filtering Z-score division by zero (StDev=0)!  (all values are equal)")
       else:
-         raise ValueError("filteringMethod should be an allowed method, "
-                              "but got %s." % str(filteringMethod))
+        raise ValueError("filteringMethod not recognized")
 
     def detect(self, signals):
       """Detects anomalies in the dataset (must be in format (index,listOfValues))"""
@@ -142,13 +145,12 @@ from pyspark import SparkContext
 #sparkContext
 sc = SparkContext.getOrCreate()
 sqlContext = SQLContext.getOrCreate(sc)
-data=sqlContext.read.table("dim2small")
-
+data=sqlContext.read.table("dim3medium")
 
 # COMMAND ----------
 
 #create model
-model= DMF(dissimilarityMethod="dtw")
+model= DMF(dissimilarityMethod="euclidean")
 signals = Signal().create(data)
 
 #detect using model
