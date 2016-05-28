@@ -1,4 +1,4 @@
-# Databricks notebook source exported at Sat, 28 May 2016 12:41:34 UTC
+# Databricks notebook source exported at Sat, 28 May 2016 14:25:05 UTC
 """
 Author: Santiago Morante
 DISTRIBUTED ANOMALY DETECTION ALGORITHM BASED ON DISSIMILARITY MAPPING FILTERING
@@ -14,7 +14,7 @@ from pyspark.rdd import RDD
 from pyspark import SparkContext
 from pandas import DataFrame as DFPandas
 from numpy.linalg import norm
-from numpy import array
+from numpy import array, count_nonzero
 from fastdtw import fastdtw
 
 
@@ -83,23 +83,25 @@ class DMF():
     :param dissimilarityMethod:  Method for performing dissimilarity
     :param mappingMethod:        Method for performing mapping
     :param filteringMethod:      Method for performing filtering
-    :param theta:                Threhold used in filtering step
+    :param alpha:                Threshold used in filtering step
     """
    
-    def __init__(self, dissimilarityMethod="euclidean", mappingMethod="sum", filteringMethod="zscore", theta=0):
+    def __init__(self, dissimilarityMethod="euclidean", mappingMethod="sum", filteringMethod="zscore", alpha=0):
       """Initialize parameters"""
       self.dissimilarityMethod = dissimilarityMethod
       self.mappingMethod = mappingMethod
       self.filteringMethod = filteringMethod
-      self.theta = theta
+      self.alpha = alpha
 
     def dissimilarity(self, doublePairs): 
       """DISSIMILARITY: calculate distance between elements"""
       if self.dissimilarityMethod == "euclidean":
         return doublePairs[0][0], norm(array(doublePairs[1][1])-array(doublePairs[0][1]))
-      if self.dissimilarityMethod == "dtw":
+      elif self.dissimilarityMethod == "dtw":
         distance, path = fastdtw(doublePairs[0][1], doublePairs[1][1])
         return doublePairs[0][0], distance
+      elif self.dissimilarityMethod == "hamming":
+        return doublePairs[0][0], count_nonzero(doublePairs[0][1] != doublePairs[1][1])
       else:
         raise ValueError("dissimilarityMethod not recognized")
 
@@ -110,13 +112,16 @@ class DMF():
       else:
         raise ValueError("mappingMethod not recognized")
         
-    def filtering(self, pairs, meanData, stdevData, theta):
-      """FILTERING: filtering data by threshold (theta) using Z-score"""
+    def filtering(self, pairs, meanData, stdevData):
+      """FILTERING: filtering data by threshold (alpha) using Z-score"""
       if self.filteringMethod == "zscore":
         try:
-          return (pairs[1] - meanData)/float(stdevData) > theta 
+          return (pairs[1] - meanData)/float(stdevData) > self.alpha 
         except:
-          raise ValueError("Filtering Z-score division by zero (StDev=0)!  (all values are equal)")
+          print("[WARNING] Filtering Z-score division by zero (StDev=0)!  (all values are equal)")
+          return []
+      elif self.filteringMethod == "threshold":
+        return pairs[1] > self.alpha
       else:
         raise ValueError("filteringMethod not recognized")
 
@@ -129,7 +134,7 @@ class DMF():
       #filtering
       meanData= dataMapping.values().mean()
       stdevData= dataMapping.values().stdev()
-      dataFiltering = dataMapping.filter(lambda pairs: self.filtering(pairs, meanData, stdevData, self.theta))
+      dataFiltering = dataMapping.filter(lambda pairs: self.filtering(pairs, meanData, stdevData))
       return dataFiltering
 
 # COMMAND ----------
@@ -150,9 +155,8 @@ data=sqlContext.read.table("dim3medium")
 # COMMAND ----------
 
 #create model
-model= DMF(dissimilarityMethod="euclidean")
-signals = Signal().create(data)
-
+model= DMF(dissimilarityMethod="hamming", filteringMethod="threshold", alpha=13)
+signals = Signal(typeOfData="categorical").create(data)
 #detect using model
 print ("Index, totalValue: ", model.detect(signals).collect())
 
