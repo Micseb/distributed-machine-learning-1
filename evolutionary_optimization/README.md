@@ -1,4 +1,4 @@
-# Distributed Multiobjective Evolutionary optimization
+# Distributed Multiobjective Evolutionary Optimization
 
 In this repository you can find a distributed version of a multiobjective evolutionary optimization algorithm.
 
