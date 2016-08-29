@@ -1,8 +1,8 @@
-# Evolutionary optimization
+# Distributed Multiobjective Evolutionary optimization
 
-In this repository you can find a distributed version of an evolutionary optimization algorithm.
+In this repository you can find a distributed version of a multiobjective evolutionary optimization algorithm.
 
-The classical paradigm of evolutionary has been adapted to fit in the computational model of Spark. The algorithm generates big populations of individuals, evaluates them pairwise (using pareto dominance) and return the best individual. This process is thought to be repeated many times. Each time a best individual is obtained, it is stored in a hall of fame of limited size. When this size is exceeded, the candidate individual is compared (using pareto dominance) with the already stored ones. If better, the loser is replaced by the winner.
+The classical paradigm of evolutionary optimization has been adapted to fit in the computational model of Spark. The algorithm generates big populations of individuals, evaluates them pairwise (using pareto dominance) and return the best individual. This process can be repeated many times. Each time a best individual is obtained, it is stored in a hall of fame of limited size. When this size is exceeded, a new candidate individual is compared (using pareto dominance) with the already stored ones. If better, the loser is replaced by the winner.
 
 Due to the way the individuals are compared using pareto dominance, this algorithm can be used for multiobjective optimization.
 

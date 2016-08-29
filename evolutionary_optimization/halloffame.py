@@ -1,7 +1,8 @@
 """
 Author: Santiago Morante
-DISTRIBUTED OPTIMIZATION BASED ON EVOLUTIVE ALGORITHMS
+DISTRIBUTED MULTIOBJECTIVE OPTIMIZATION BASED ON EVOLUTIVE ALGORITHMS
 """
+
 
 ###################################################################################
 ###########################   CLASS HALL OF FAME  ################################
@@ -86,3 +87,4 @@ class HallOfFame():
       return 1
     else:
       raise TypeError("pairwiseSelectionNumber failed!")
+
