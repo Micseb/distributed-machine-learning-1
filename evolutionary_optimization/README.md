@@ -15,20 +15,20 @@ This repository includes two classes:
 
 The classical three steps of evolutionary algorithm are performed in the following way:
 
-1. **Mutation**: A population of individuals, mutated from a prototype, is generated.
+* **Mutation**: A population of individuals, mutated from a prototype, is generated.
 
 ```
 #in EvolPop
 ...flatMap(lambda x: self.generateMutatedPopulation(x))
 ```
 
-2. **Selection**: All the individuals of the population are evaluated to obtain the best one.
+* **Selection**: All the individuals of the population are evaluated to obtain the best one.
 
 ```
 #in EvolPop
 ...reduce(lambda a,b: self.pairwiseSelection(a, b))
 ```
-2. **Crossover**: From the hall of fame, two individuals are selected randomly and uniformly crossovered. The descendant can be used to generated a new mutated population.
+* **Crossover**: From the hall of fame, two individuals are selected randomly and uniformly crossovered. The descendant can be used to generated a new mutated population.
 
 ```
 #in HallOfFame
